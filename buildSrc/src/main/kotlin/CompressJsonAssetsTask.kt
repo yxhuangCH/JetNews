@@ -1,8 +1,6 @@
 import org.gradle.api.DefaultTask
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.tasks.*
-import org.json.JSONArray
-import org.json.JSONObject
+import org.gradle.api.file.DirectoryProperty
 import java.io.File
 
 @CacheableTask
@@ -16,7 +14,7 @@ abstract class CompressJsonAssetsTask : DefaultTask() {
     abstract val outputDir: DirectoryProperty
 
     @TaskAction
-    fun compress() {
+    fun run() {
         val input = inputDir.get().asFile
         val output = outputDir.get().asFile
 
@@ -26,29 +24,29 @@ abstract class CompressJsonAssetsTask : DefaultTask() {
         if (!input.exists()) return
 
         input.walkTopDown().forEach { file ->
-            if (file.isFile) {
-                val targetFile = File(output, file.relativeTo(input).path)
-                targetFile.parentFile.mkdirs()
-                if (file.extension.equals("json", ignoreCase = true)) {
-                    try {
-                        val text = file.readText().trim()
-                        val compressedContent = when {
-                            text.startsWith("{") -> JSONObject(text).toString()
-                            text.startsWith("[") -> JSONArray(text).toString()
-                            else -> {
-                                println("⚠️ Warning: ${file.name} is not valid JSON, copying as-is.")
-                                text
-                            }
+            if (!file.isFile) return@forEach
+
+            val target = File(output, file.relativeTo(input).path)
+            target.parentFile.mkdirs()
+
+            if (file.extension.equals("json", ignoreCase = true)) {
+                try {
+                    val text = file.readText().trim()
+                    val compressed = when {
+                        text.startsWith("{") -> org.json.JSONObject(text).toString()
+                        text.startsWith("[") -> org.json.JSONArray(text).toString()
+                        else -> {
+                            logger.warn("Not valid JSON: ${file.name}, copied as-is.")
+                            text
                         }
-                        targetFile.writeText(compressedContent)
-                        println("✅ Compressed JSON: ${file.relativeTo(input)}")
-                    } catch (e: Exception) {
-                        println("❌ Error compressing ${file.name}: ${e.message}")
-                        file.copyTo(targetFile, overwrite = true)
                     }
-                } else {
-                    file.copyTo(targetFile, overwrite = true)
+                    target.writeText(compressed)
+                } catch (e: Exception) {
+                    logger.warn("Compress failed: ${file.name}: ${e.message}")
+                    file.copyTo(target, overwrite = true)
                 }
+            } else {
+                file.copyTo(target, overwrite = true)
             }
         }
     }

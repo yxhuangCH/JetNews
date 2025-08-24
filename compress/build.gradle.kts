@@ -66,74 +66,74 @@ afterEvaluate {
 val compressedAssetsDir = file("$buildDir/intermediates/compressedAssets")
 
 // 自定义Task用于压缩assets中的JSON文件（减少AAR包大小）
-//tasks.register("compressJsonAssets") {
-//    group = "build"
-//    description = "Compresses JSON assets to reduce AAR size by minifying JSON files"
-//
-//    // 设置输入和输出目录用于增量构建
-//    inputs.dir(file("src/main/assets"))
-//    outputs.dir(compressedAssetsDir)
-//
-//    doLast {
-//        // 清理并创建压缩后的assets目录
-//        compressedAssetsDir.deleteRecursively()
-//        compressedAssetsDir.mkdirs()
-//
-//        val originalAssetsDir = file("src/main/assets")
-//        if (originalAssetsDir.exists()) {
-//            println("Compressing JSON assets from: ${originalAssetsDir.absolutePath}")
-//
-//            // 复制所有原始assets文件到压缩目录
-//            originalAssetsDir.copyRecursively(compressedAssetsDir, overwrite = true)
-//
-//            // 查找并压缩所有JSON文件
-//            compressedAssetsDir.walk().filter { it.isFile && it.extension.equals("json", ignoreCase = true) }.forEach { jsonFile ->
-//                try {
-//                    val originalContent = jsonFile.readText()
-//                    // 使用更可靠的JSON压缩方法：移除所有不必要的空白字符
-//                    val compressedContent = originalContent
-//                        .replace("\\s*(?=([^\"\\\\]*(\\\\.|\"([^\"\\\\]*\\\\.)*[^\"\\\\]*\"))*[^\"]*$)\\s*".toRegex(), "") // 移除JSON结构外的空白
-//                        .trim()
-//
-//                    jsonFile.writeText(compressedContent)
-//                    println("Compressed: ${jsonFile.relativeTo(compressedAssetsDir)}")
-//                    println("  Original size: ${originalContent.length} bytes")
-//                    println("  Compressed size: ${compressedContent.length} bytes")
-//                    println("  Size reduction: ${originalContent.length - compressedContent.length} bytes (${"%.1f".format((1 - compressedContent.length.toDouble() / originalContent.length) * 100)}%)")
-//                } catch (e: Exception) {
-//                    println("Error compressing ${jsonFile.name}: ${e.message}")
-//                }
-//            }
-//        }
-//    }
-//}
+tasks.register("compressJsonAssets") {
+    group = "build"
+    description = "Compresses JSON assets to reduce AAR size by minifying JSON files"
 
-//// 配置mergeAssets任务使用压缩后的assets
-//afterEvaluate {
-//    android.libraryVariants.forEach { variant ->
-//        val variantName = variant.name
-//        val mergeAssetsTaskName = "merge${variantName.replaceFirstChar { it.uppercase() }}Assets"
-//
-//        tasks.matching { it.name == mergeAssetsTaskName }.forEach { mergeAssetsTask ->
-//            // 添加对压缩任务的依赖
-//            mergeAssetsTask.dependsOn("compressJsonAssets")
-//
-//            // 在任务执行前添加压缩后的assets目录到输入源
-//            mergeAssetsTask.doFirst {
-//                // 获取当前assets源目录
-//                val assetsDirs = mergeAssetsTask.inputs.files.files.filter { it.isDirectory }
-//                // 添加压缩后的assets目录
-//                mergeAssetsTask.inputs.files(assetsDirs + compressedAssetsDir)
-//                println("Added compressed assets directory to mergeAssets task: ${compressedAssetsDir.absolutePath}")
-//            }
-//        }
-//    }
-//
-//    // 为publish任务也添加依赖，确保发布时包含压缩后的assets
-//    tasks.matching { it.name.startsWith("publish") }.forEach {
-//        it.dependsOn("compressJsonAssets")
-//    }
-//}
+    // 设置输入和输出目录用于增量构建
+    inputs.dir(file("src/main/assets"))
+    outputs.dir(compressedAssetsDir)
+
+    doLast {
+        // 清理并创建压缩后的assets目录
+        compressedAssetsDir.deleteRecursively()
+        compressedAssetsDir.mkdirs()
+
+        val originalAssetsDir = file("src/main/assets")
+        if (originalAssetsDir.exists()) {
+            println("Compressing JSON assets from: ${originalAssetsDir.absolutePath}")
+
+            // 复制所有原始assets文件到压缩目录
+            originalAssetsDir.copyRecursively(compressedAssetsDir, overwrite = true)
+
+            // 查找并压缩所有JSON文件
+            compressedAssetsDir.walk().filter { it.isFile && it.extension.equals("json", ignoreCase = true) }.forEach { jsonFile ->
+                try {
+                    val originalContent = jsonFile.readText()
+                    // 使用更可靠的JSON压缩方法：移除所有不必要的空白字符
+                    val compressedContent = originalContent
+                        .replace("\\s*(?=([^\"\\\\]*(\\\\.|\"([^\"\\\\]*\\\\.)*[^\"\\\\]*\"))*[^\"]*$)\\s*".toRegex(), "") // 移除JSON结构外的空白
+                        .trim()
+
+                    jsonFile.writeText(compressedContent)
+                    println("Compressed: ${jsonFile.relativeTo(compressedAssetsDir)}")
+                    println("  Original size: ${originalContent.length} bytes")
+                    println("  Compressed size: ${compressedContent.length} bytes")
+                    println("  Size reduction: ${originalContent.length - compressedContent.length} bytes (${"%.1f".format((1 - compressedContent.length.toDouble() / originalContent.length) * 100)}%)")
+                } catch (e: Exception) {
+                    println("Error compressing ${jsonFile.name}: ${e.message}")
+                }
+            }
+        }
+    }
+}
+
+// 配置mergeAssets任务使用压缩后的assets
+afterEvaluate {
+    android.libraryVariants.forEach { variant ->
+        val variantName = variant.name
+        val mergeAssetsTaskName = "merge${variantName.replaceFirstChar { it.uppercase() }}Assets"
+        
+        tasks.matching { it.name == mergeAssetsTaskName }.forEach { mergeAssetsTask ->
+            // 添加对压缩任务的依赖
+            mergeAssetsTask.dependsOn("compressJsonAssets")
+            
+            // 在任务执行前添加压缩后的assets目录到输入源
+            mergeAssetsTask.doFirst {
+                // 获取当前assets源目录
+                val assetsDirs = mergeAssetsTask.inputs.files.files.filter { it.isDirectory }
+                // 添加压缩后的assets目录
+                mergeAssetsTask.inputs.files(assetsDirs + compressedAssetsDir)
+                println("Added compressed assets directory to mergeAssets task: ${compressedAssetsDir.absolutePath}")
+            }
+        }
+    }
+
+    // 为publish任务也添加依赖，确保发布时包含压缩后的assets
+    tasks.matching { it.name.startsWith("publish") }.forEach {
+        it.dependsOn("compressJsonAssets")
+    }
+}
 
 dependencies {
 
@@ -143,89 +143,4 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.espresso.core)
-}
-
-/**
- * 压缩 JSON 的 Task（支持增量 & 缓存）
- */
-@CacheableTask
-abstract class CompressJsonAssetsTask : DefaultTask() {
-
-    @get:InputDirectory
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val inputDir: DirectoryProperty
-
-    @get:OutputDirectory
-    abstract val outputDir: DirectoryProperty
-
-    @TaskAction
-    fun compress() {
-        val input = inputDir.get().asFile
-        val output = outputDir.get().asFile
-
-        output.deleteRecursively()
-        output.mkdirs()
-
-        if (!input.exists()) return
-
-        input.walkTopDown().forEach { file ->
-            if (file.isFile) {
-                val targetFile = File(output, file.relativeTo(input).path)
-                targetFile.parentFile.mkdirs()
-                if (file.extension.equals("json", ignoreCase = true)) {
-                    try {
-                        val text = file.readText().trim()
-                        val compressedContent = when {
-                            text.startsWith("{") -> {
-                                // 处理 JSONObject
-                                val json = org.json.JSONObject(text)
-                                json.toString()
-                            }
-                            text.startsWith("[") -> {
-                                // 处理 JSONArray
-                                val json = org.json.JSONArray(text)
-                                json.toString()
-                            }
-                            else -> {
-                                // 格式异常，原样复制
-                                println("Warning: ${file.name} is not a valid JSON, copying as-is.")
-                                text
-                            }
-                        }
-                        targetFile.writeText(compressedContent)
-                        println("Compressed JSON: ${file.relativeTo(input)}")
-                    } catch (e: Exception) {
-                        println("Error compressing ${file.name}: ${e.message}")
-                        file.copyTo(targetFile, overwrite = true)
-                    }
-                } else {
-                    // 非 JSON 文件原样复制
-                    file.copyTo(targetFile, overwrite = true)
-                }
-            }
-        }
-    }
-}
-
-
-/**
- * 将压缩任务接入到 Android 构建流程
- */
-androidComponents {
-    onVariants { variant ->
-        if (variant.buildType == "release") {
-            val taskProvider = project.tasks.register<CompressJsonAssetsTask>(
-                "compress${variant.name.replaceFirstChar { it.uppercase() }}JsonAssets"
-            ) {
-                inputDir.set(project.layout.projectDirectory.dir("src/main/assets"))
-                outputDir.set(project.layout.buildDirectory.dir("intermediates/compressedAssets/${variant.name}"))
-            }
-
-            // 用压缩结果替换默认 assets 源
-            variant.sources.assets?.addGeneratedSourceDirectory(
-                taskProvider,
-                CompressJsonAssetsTask::outputDir
-            )
-        }
-    }
 }

@@ -3,6 +3,7 @@
 # Do not add a dependency to an individual sample, edit the global version instead.
 #####
 [versions]
+agp = "8.7.2"
 accompanist = "0.36.0"
 androidGradlePlugin = "8.7.2"
 androidx-activity-compose = "1.9.3"
@@ -61,6 +62,7 @@ version-catalog-update = "0.8.5"
 material = "1.10.0"
 
 [libraries]
+agp = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 accompanist-adaptive = { module = "com.google.accompanist:accompanist-adaptive", version.ref = "accompanist" }
 accompanist-flowlayout = { module = "com.google.accompanist:accompanist-flowlayout", version.ref = "accompanist" }
 accompanist-pager = { module = "com.google.accompanist:accompanist-pager", version.ref = "accompanist" }

@@ -1,0 +1,9 @@
+{
+  "id": 2,
+  "name": "Bob",
+  "age": 30,
+  "city": "San Francisco",
+  "is_active": false,
+  "build_type": "debug",
+  "build_time": "00"
+}

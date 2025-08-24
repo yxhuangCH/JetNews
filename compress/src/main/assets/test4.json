@@ -1,0 +1,10 @@
+{
+  "id": 1,
+  "name": "Alice",
+  "age": 25,
+  "city": "New York",
+  "is_active": true,
+  "build_type": "debug",
+  "build_time": "11",
+  "version_code": 1
+}

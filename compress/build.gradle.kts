@@ -65,10 +65,10 @@ afterEvaluate {
 // 创建修改后的assets目录
 val modifiedAssetsDir = file("$buildDir/modifiedAssets")
 
-// 自定义Task用于压缩assets中的JSON文件（减少APK包大小）
+// 自定义Task用于压缩assets中的JSON文件（减少AAR包大小）
 tasks.register("prepareModifiedAssets") {
     group = "build"
-    description = "Compresses JSON assets to reduce APK size by removing unnecessary whitespace"
+    description = "Compresses JSON assets to reduce AAR size by minifying JSON files"
 
     doLast {
         // 清理并创建修改后的assets目录
@@ -86,10 +86,9 @@ tasks.register("prepareModifiedAssets") {
             modifiedAssetsDir.walk().filter { it.isFile && it.extension.equals("json", ignoreCase = true) }.forEach { jsonFile ->
                 try {
                     val originalContent = jsonFile.readText()
-                    // 压缩JSON：移除所有不必要的空格和换行符
+                    // 使用更可靠的JSON压缩方法：移除所有不必要的空白字符，但保留字符串内的空格
                     val compressedContent = originalContent
-                        .replace("\\s+".toRegex(), " ") // 替换多个空格为单个空格
-                        .replace("\\s*([\\{\\}\\[\\],:])\\s*".toRegex(), "$1") // 移除符号周围的空格
+                        .replace("\\s*(?=([^\"\\\\]*(\\\\.|\"([^\"\\\\]*\\\\.)*[^\"\\\\]*\"))*[^\"]*$)\\s*".toRegex(), "") // 移除JSON结构外的空白
                         .trim()
 
                     jsonFile.writeText(compressedContent)
@@ -105,18 +104,19 @@ tasks.register("prepareModifiedAssets") {
     }
 }
 
-// 配置Android构建使用修改后的assets
+// 配置Android构建使用修改后的assets（替换原始assets）
 android {
     sourceSets {
         getByName("main") {
-            // 在prepareModifiedAssets任务执行后设置assets目录
+            // 设置assets目录为修改后的目录，替换默认的src/main/assets
             assets.setSrcDirs(listOf(modifiedAssetsDir))
         }
     }
 }
 
-// 在所有项目配置完成后添加任务依赖
+// 确保所有相关任务都依赖prepareModifiedAssets
 afterEvaluate {
+    // 为所有变体的mergeAssets任务添加依赖
     android.libraryVariants.forEach { variant ->
         val variantName = variant.name
         val mergeAssetsTaskName = "merge${variantName.capitalize()}Assets"
@@ -125,6 +125,12 @@ afterEvaluate {
             dependsOn("prepareModifiedAssets")
             println("Added dependency: $mergeAssetsTaskName dependsOn prepareModifiedAssets")
         }
+    }
+
+    // 为publish任务也添加依赖，确保发布时包含压缩后的assets
+    tasks.matching { it.name.startsWith("publish") }.all {
+        dependsOn("prepareModifiedAssets")
+        println("Added dependency: $name dependsOn prepareModifiedAssets")
     }
 }
 
